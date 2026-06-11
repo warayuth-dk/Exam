@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
   <head>
     <meta charset="UTF-8" />
@@ -18,7 +18,43 @@
         padding: 10px;
         display: flex;
         justify-content: center;
+        align-items: center; /* กึ่งกลางหน้าจอ */
+        min-height: 100vh;
       }
+      
+      /* สไตล์หน้า Login */
+      #login-screen {
+        max-width: 400px;
+        width: 100%;
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .login-input {
+        width: 90%;
+        padding: 15px;
+        margin: 20px 0;
+        border: 2px solid #eee;
+        border-radius: 12px;
+        font-size: 1.2em;
+        text-align: center;
+        outline: none;
+      }
+      .login-btn {
+        width: 100%;
+        padding: 15px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1em;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      /* สไตล์กล่องข้อสอบ */
       .quiz-container {
         max-width: 600px;
         width: 100%;
@@ -26,7 +62,7 @@
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        margin-top: 10px;
+        display: none; /* ซ่อนไว้ก่อน Login */
       }
       .subject-tag {
         font-size: 0.8em;
@@ -106,25 +142,21 @@
         display: none;
         padding: 40px 10px;
       }
-      .passage-box {
-        background: #fffde7;
-        border-left: 5px solid #f1c40f;
-        padding: 15px;
-        margin-bottom: 15px;
-        font-style: italic;
-        font-size: 0.95em;
-        line-height: 1.6;
-        display: none;
-
-        /* บรรทัดนี้สำคัญที่สุด */
-        white-space: pre-wrap;
-
-        border-radius: 5px;
-      }
     </style>
   </head>
   <body>
-    <div class="quiz-container">
+
+    <!-- ส่วนที่ 1: หน้า Login -->
+    <div id="login-screen">
+      <h2 style="color: var(--primary); margin: 0;">กรุณาใส่รหัสผ่าน</h2>
+      <p style="color: #888; font-size: 0.9em;">เพื่อเข้าทำแบบทดสอบนายสิบทหารบก</p>
+      <input type="password" id="passcode" class="login-input" placeholder="ใส่รหัสผ่านที่นี่">
+      <button onclick="checkLogin()" class="login-btn">เข้าสู่ระบบ</button>
+      <p id="error-msg" style="color: var(--danger); margin-top: 15px; display: none;">❌ รหัสผ่านไม่ถูกต้อง</p>
+    </div>
+
+    <!-- ส่วนที่ 2: หน้าข้อสอบ (จะแสดงเมื่อรหัสผ่านถูกต้อง) -->
+    <div class="quiz-container" id="quiz-container">
       <div id="quiz-content">
         <div class="subject-tag" id="subject-tag">กำลังโหลด...</div>
         <div class="passage-box" id="passage-box"></div>
@@ -136,44 +168,48 @@
 
       <div class="score-board" id="score-board">
         <h2>จบการทดสอบ!</h2>
-        <div
-          style="font-size: 4em; color: var(--success); font-weight: bold"
-          id="final-score"
-        >
-          0
-        </div>
+        <div style="font-size: 4em; color: var(--success); font-weight: bold" id="final-score">0</div>
         <p id="result-summary"></p>
-        <button
-          class="option"
-          style="text-align: center; background: var(--primary); color: white"
-          onclick="location.reload()"
-        >
+        <button class="option" style="text-align: center; background: var(--primary); color: white" onclick="location.reload()">
           เริ่มทำใหม่
         </button>
       </div>
     </div>
 
     <script>
+      const SECRET_CODE = "army2570"; // <--- รหัสผ่านคืออันนี้ครับ
       let quizList = [];
       let currentIdx = 0;
       let score = 0;
 
+      // ฟังก์ชันเช็ครหัสผ่าน
+      function checkLogin() {
+        const input = document.getElementById("passcode").value;
+        if (input === SECRET_CODE) {
+          document.getElementById("login-screen").style.display = "none";
+          document.getElementById("quiz-container").style.display = "block";
+          loadExamData(); // เริ่มโหลดข้อมูลเมื่อเข้าสู่ระบบสำเร็จ
+        } else {
+          document.getElementById("error-msg").style.display = "block";
+          document.getElementById("passcode").value = "";
+        }
+      }
+
       async function loadExamData() {
         try {
-          // ใช้ Relative Path เพื่อให้รันได้บน Server/GitHub
           const response = await fetch("exam.json");
           const data = await response.json();
 
           data.forEach((sec) => {
             sec.questions.forEach((item) => {
-              item.category = sec.category; // เก็บชื่อวิชาไว้ในแต่ละข้อ
+              item.category = sec.category;
               quizList.push(item);
             });
           });
           loadQuestion();
         } catch (e) {
           document.getElementById("question-text").innerText =
-            "❌ ไม่สามารถโหลดไฟล์ exam.json ได้ (ต้องรันผ่าน Live Server หรืออัปโหลดขึ้นเว็บเท่านั้น)";
+            "❌ ไม่สามารถโหลดไฟล์ exam.json ได้ (ต้องรันผ่าน Live Server เท่านั้น)";
         }
       }
 
@@ -181,7 +217,7 @@
         const item = quizList[currentIdx];
         document.getElementById("subject-tag").innerText = item.category;
         document.getElementById("question-text").innerText =
-          currentIdx + 1 + ". " + item.question;
+          (currentIdx + 1) + ". " + item.question;
         document.getElementById("progress-info").innerText =
           `ข้อที่ ${currentIdx + 1} / ${quizList.length}`;
 
@@ -236,8 +272,6 @@
         document.getElementById("result-summary").innerText =
           `คุณทำได้ ${score} จาก ${quizList.length} ข้อ`;
       }
-
-      loadExamData();
     </script>
   </body>
 </html>
