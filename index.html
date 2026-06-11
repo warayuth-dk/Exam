@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ระบบทดสอบ นายสิบทหารบก 2570</title>
+    <style>
+      :root {
+        --primary: #2c3e50;
+        --success: #2ecc71;
+        --danger: #e74c3c;
+        --bg: #f4f7f6;
+      }
+      body {
+        font-family: "Tahoma", sans-serif;
+        background: var(--bg);
+        margin: 0;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+      }
+      .quiz-container {
+        max-width: 600px;
+        width: 100%;
+        background: white;
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        margin-top: 10px;
+      }
+      .subject-tag {
+        font-size: 0.8em;
+        color: white;
+        background: var(--primary);
+        padding: 5px 15px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        display: inline-block;
+      }
+      .passage-box {
+        background: #fffde7;
+        border-left: 5px solid #f1c40f;
+        padding: 15px;
+        margin-bottom: 15px;
+        font-style: italic;
+        font-size: 0.95em;
+        line-height: 1.6;
+        display: none;
+        white-space: pre-wrap;
+        border-radius: 5px;
+      }
+      .question {
+        font-weight: bold;
+        margin-bottom: 20px;
+        font-size: 1.1em;
+        color: #333;
+      }
+      .option {
+        display: block;
+        background: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        cursor: pointer;
+        border: 2px solid #eee;
+        width: 100%;
+        text-align: left;
+        font-size: 1em;
+        transition: 0.2s;
+        outline: none;
+      }
+      .option:hover {
+        background: #e9ecef;
+      }
+      .correct {
+        background: var(--success) !important;
+        color: white;
+        border-color: #27ae60;
+      }
+      .wrong {
+        background: var(--danger) !important;
+        color: white;
+        border-color: #c0392b;
+      }
+      #next-btn {
+        margin-top: 10px;
+        padding: 15px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        display: none;
+        width: 100%;
+        font-size: 1.1em;
+        font-weight: bold;
+      }
+      .progress-info {
+        font-size: 0.85em;
+        color: #888;
+        text-align: center;
+        margin-top: 15px;
+      }
+      .score-board {
+        text-align: center;
+        display: none;
+        padding: 40px 10px;
+      }
+      .passage-box {
+        background: #fffde7;
+        border-left: 5px solid #f1c40f;
+        padding: 15px;
+        margin-bottom: 15px;
+        font-style: italic;
+        font-size: 0.95em;
+        line-height: 1.6;
+        display: none;
+
+        /* บรรทัดนี้สำคัญที่สุด */
+        white-space: pre-wrap;
+
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="quiz-container">
+      <div id="quiz-content">
+        <div class="subject-tag" id="subject-tag">กำลังโหลด...</div>
+        <div class="passage-box" id="passage-box"></div>
+        <div class="question" id="question-text">กรุณารอสักครู่...</div>
+        <div id="options-container"></div>
+        <button id="next-btn" onclick="nextQuestion()">ข้อถัดไป ➔</button>
+        <div class="progress-info" id="progress-info"></div>
+      </div>
+
+      <div class="score-board" id="score-board">
+        <h2>จบการทดสอบ!</h2>
+        <div
+          style="font-size: 4em; color: var(--success); font-weight: bold"
+          id="final-score"
+        >
+          0
+        </div>
+        <p id="result-summary"></p>
+        <button
+          class="option"
+          style="text-align: center; background: var(--primary); color: white"
+          onclick="location.reload()"
+        >
+          เริ่มทำใหม่
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let quizList = [];
+      let currentIdx = 0;
+      let score = 0;
+
+      async function loadExamData() {
+        try {
+          // ใช้ Relative Path เพื่อให้รันได้บน Server/GitHub
+          const response = await fetch("exam.json");
+          const data = await response.json();
+
+          data.forEach((sec) => {
+            sec.questions.forEach((item) => {
+              item.category = sec.category; // เก็บชื่อวิชาไว้ในแต่ละข้อ
+              quizList.push(item);
+            });
+          });
+          loadQuestion();
+        } catch (e) {
+          document.getElementById("question-text").innerText =
+            "❌ ไม่สามารถโหลดไฟล์ exam.json ได้ (ต้องรันผ่าน Live Server หรืออัปโหลดขึ้นเว็บเท่านั้น)";
+        }
+      }
+
+      function loadQuestion() {
+        const item = quizList[currentIdx];
+        document.getElementById("subject-tag").innerText = item.category;
+        document.getElementById("question-text").innerText =
+          currentIdx + 1 + ". " + item.question;
+        document.getElementById("progress-info").innerText =
+          `ข้อที่ ${currentIdx + 1} / ${quizList.length}`;
+
+        const pBox = document.getElementById("passage-box");
+        if (item.p) {
+          pBox.innerText = item.p;
+          pBox.style.display = "block";
+        } else {
+          pBox.style.display = "none";
+        }
+
+        const container = document.getElementById("options-container");
+        container.innerHTML = "";
+        document.getElementById("next-btn").style.display = "none";
+
+        Object.keys(item.options).forEach((key) => {
+          const btn = document.createElement("button");
+          btn.className = "option";
+          btn.innerText = key + ". " + item.options[key];
+          btn.onclick = () => checkAnswer(btn, key, item.answer);
+          container.appendChild(btn);
+        });
+      }
+
+      function checkAnswer(btn, selected, correct) {
+        const all = document.querySelectorAll(".option");
+        all.forEach((b) => (b.style.pointerEvents = "none"));
+
+        if (selected === correct) {
+          btn.classList.add("correct");
+          score++;
+        } else {
+          btn.classList.add("wrong");
+          all.forEach((b) => {
+            if (b.innerText.startsWith(correct + "."))
+              b.classList.add("correct");
+          });
+        }
+        document.getElementById("next-btn").style.display = "block";
+      }
+
+      function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < quizList.length) loadQuestion();
+        else showScore();
+      }
+
+      function showScore() {
+        document.getElementById("quiz-content").style.display = "none";
+        document.getElementById("score-board").style.display = "block";
+        document.getElementById("final-score").innerText = score;
+        document.getElementById("result-summary").innerText =
+          `คุณทำได้ ${score} จาก ${quizList.length} ข้อ`;
+      }
+
+      loadExamData();
+    </script>
+  </body>
+</html>
